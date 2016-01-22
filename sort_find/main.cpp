@@ -41,7 +41,8 @@ static void check_sort(unsigned n)
 	//sort_bub(&a[0], n);
 	//sort_shell(&a[0], n);
 	//sort_quick(&a[0], n);
-	sort_merge(&a[0], n);
+	sort_quick3(&a[0], n);
+	//sort_merge(&a[0], n);
 
 	c = clock() - c;
 

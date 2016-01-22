@@ -133,7 +133,7 @@ void sort_shell(Item* a, unsigned n)
 // ====================================
 // Quick Sort
 template<class Item>
-unsigned partition(Item* a, unsigned n)
+static unsigned partition(Item* a, unsigned n)
 {
 	unsigned l = n - 1;
 	Item m = a[l];
@@ -167,6 +167,86 @@ void sort_quick(Item* a, unsigned n)
 
 	sort_quick(a_small, n_small);
 	sort_quick(a_large, n_large);
+}
+
+// ====================================
+// Quick Sort with a 3-way partition:
+// {{less}, {eq}, {greater}}
+struct PartitionBounds
+{
+	unsigned Equal;
+	unsigned Greater;
+	PartitionBounds(unsigned eq, unsigned gr): Equal(eq), Greater(gr) {}
+};
+
+template<class Item>
+PartitionBounds partition3(Item* a, unsigned n)
+{
+	unsigned l = n - 1;
+	unsigned mid = 0;
+	Item m = a[l];
+
+	// Place equal elements in the beginning in the first loop
+	for(unsigned i = l - 1; i >= mid && i < n;)
+	{
+		if(a[i] == m)
+		{
+			exch(a[i], a[mid]);
+			mid++;
+			continue;
+		}
+		if(a[i] > m)
+		{
+			--l;
+			exch(a[i], a[l]);
+		}
+		--i;
+	}
+	if(l != n - 1)
+		exch(a[l], a[n - 1]);
+
+	// Place equal elements in the middle of the array
+	if(mid)
+	{
+		unsigned exchanges = l - mid;
+		if(exchanges > mid)
+			exchanges = mid;
+		for(unsigned i = 0, j = l - 1; exchanges; i++, j--, exchanges--)
+			exch(a[i], a[j]);
+	}
+	mid = l - mid;
+
+	return PartitionBounds(mid, l + 1);
+}
+
+template<class Item>
+static void sort_quick3(Item* a, unsigned n)
+{
+	if(n < 2)
+		return;
+	PartitionBounds bounds = partition3(a, n);
+
+	// Process the smaller part first to avoid deep recursion
+	Item *a_small, *a_large;
+	unsigned n_small, n_large;
+
+	n_small = bounds.Equal;
+	n_large = n - bounds.Greater;
+	if(n_small <= n_large)
+	{
+		a_small = a;
+		a_large = a + bounds.Greater;
+	}
+	else
+	{
+		a_small = a + bounds.Greater;
+		n_small = n - bounds.Greater;
+		a_large = a;
+		n_large = bounds.Equal;
+	}
+
+	sort_quick3(a_small, n_small);
+	sort_quick3(a_large, n_large);
 }
 
 // ====================================
