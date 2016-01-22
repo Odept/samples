@@ -1,7 +1,6 @@
 #include <iostream>
 #include <vector>
 #include <cstdlib>
-//#include <ctime>
 
 #include "sort.h"
 #include "search.h"
@@ -9,8 +8,10 @@
 
 static unsigned urand()
 {
-	return arc4random();
-	//return (((rand() % 0x10000) << 16) | (rand() % 0x10000));
+	static int dummy = (srand(time(NULL)), 0);
+	return (((rand() & 0x7FFF) << 17) | ((rand() & 0x7FFF) << 2) << (rand() & 0x3));
+	//return (rand() & 0x3);
+	//return arc4random();
 }
 
 static void irand(int* a, unsigned n)
