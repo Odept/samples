@@ -295,6 +295,43 @@ void sort_merge(Item* a, unsigned n)
 	delete aux;
 }
 
+// ====================================
+// Heap Sort
+template<class Item>
+static void fixDown(unsigned at, Item* a, unsigned n)
+{
+	/**
+	 * Get heap-index of the left child, treating the input array as a heap
+	 * (having one extra empty element in the beginning): heap_index = index + 1
+	 */
+	unsigned j = (at + 1) * 2;
+	if(j > n) // = (heap_child >= heap_n)
+		return;
+	// Select the maximum child element (non-heap index)
+	j = (j < n && a[j - 1] < a[j]) ? j : (j - 1);
+	if(a[j] < a[at])
+		return;
+	exch(a[at], a[j]);
+	fixDown(j, a, n);
+}
+
+template<class Item>
+void sort_heap(Item* a, unsigned n)
+{
+	if(n < 2)
+		return;
+	// Step 1: build a priority queue (weakly sorted in descending order)
+	for(unsigned i = n / 2 - 1; i < n; --i)
+		fixDown(i, a, n);
+	// Step 2: loop exchanging the max (top) element with the last one,
+	//         and fixing the priority queue
+	for(unsigned i = n - 1; i > 0; --i)
+	{
+		exch(a[0], a[i]);
+		fixDown(0, a, i);
+	}
+}
+
 // ============================================================================
 template<class Item>
 static bool is_sorted(Item* a, unsigned n)
