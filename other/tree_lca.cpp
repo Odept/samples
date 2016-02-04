@@ -7,65 +7,38 @@
 
 #include <stack>
 
-// Node & Tree functions
-struct Node
-{
-	Node *l, *r;
-	Node *p;
-	int N;
-	unsigned L;
-	Node(Node* _p, int x, unsigned lv): p(_p), N(x), L(lv), l(nullptr), r(nullptr) {}
-};
 
-static void insert(Node*& p, Node* parent, int x, unsigned level = 0)
-{
-	if(p)
-	{
-		if(rand() & 1)
-			insert(p->l, p, x, level + 1);
-		else
-			insert(p->r, p, x, level + 1);
-	}
-	else
-		p = new Node(parent, x, level);
-}
-
-Node* find(Node* p, int x)
-{
-	if(!p)
-		return nullptr;
-
-	if(p->N == x)
-		return p;
-	if(Node* l = find(p->l, x))
-		return l;
-	if(Node* r = find(p->r, x))
-		return r;
-	return nullptr;
-}
-
-// ====================================
-class LCA
+template<typename T>
+class Tree
 {
 public:
-	LCA(Node* root, int x, int y, bool use_parent):
-		m_p(nullptr)
+	struct Node
 	{
-		if(!root)
-			return;
+		Node *l, *r;
+		Node *p;
+		T N;
+		unsigned L;
+		Node(Node* _p, int x, unsigned lv): p(_p), N(x), L(lv), l(nullptr), r(nullptr) {}
+	};
+
+	// LCA functions
+public:
+	Node* lca(const T& x, const T& y, bool use_parent)
+	{
+		if(!m_root)
+			return nullptr;
+
 		if(use_parent)
-			m_p = traverse(find(root, x), find(root, y));
+			return traverse(find(x), find(y));
 		else
 		{
-			Node* a = find(root, x);
-			Node* b = find(root, y);
+			Node* a = find(x);
+			Node* b = find(y);
 			if(!a || !b)
-				return;
-			m_p = traverse(root, a, b);
+				return nullptr;
+			return traverse(m_root, a, b);
 		}
 	}
-
-	const Node* get() const { return m_p; }
 
 private:
 	// Solution for nodes w/o the parent pointer
@@ -111,8 +84,43 @@ private:
 		return z;
 	}
 
+	// Tree functions
+public:
+	Tree(): m_root(nullptr) {}
+
+	void insert(const T& x) { insert(m_root, nullptr, x, 0); }
+	Node* find(const T& x) { return find(m_root, x); }
+
 private:
-	const Node* m_p;
+	void insert(Node*& p, Node* parent, const T& x, unsigned level)
+	{
+		if(p)
+		{
+			if(rand() & 1)
+				insert(p->l, p, x, level + 1);
+			else
+				insert(p->r, p, x, level + 1);
+		}
+		else
+			p = new Node(parent, x, level);
+	}
+
+	Node* find(Node* cur, int x)
+	{
+		if(!cur)
+			return nullptr;
+
+		if(cur->N == x)
+			return cur;
+		if(Node* l = find(cur->l, x))
+			return l;
+		if(Node* r = find(cur->r, x))
+			return r;
+		return nullptr;
+	}
+
+private:
+	Node* m_root;
 };
 
 // ====================================
@@ -141,9 +149,9 @@ int main(int, char**)
 	}
 
 	// Init tree
-	Node* root = nullptr;
+	Tree<int> tree;
 	for(unsigned i = 0; i < N; i++)
-		insert(root, nullptr, nums[i]);
+		tree.insert(nums[i]);
 
 	// Get 2 random numbers for LCA
 	unsigned i = rand() % N;
@@ -154,31 +162,27 @@ int main(int, char**)
 
 	//std::cout << nums[i] << ":";
 	std::cout << "Node A: " << nums[i];
-	for(Node* p = find(root, nums[i])->p; p; p = p->p)
+	for(auto p = tree.find(nums[i])->p; p; p = p->p)
 		std::cout << " <- " << p->N;
 	std::cout << std::endl;
 
 	std::cout << "Node B: " << nums[j];
-	for(Node* p = find(root, nums[j])->p; p; p = p->p)
+	for(auto p = tree.find(nums[j])->p; p; p = p->p)
 		std::cout << " <- " << p->N;
 	std::cout << std::endl;
 
 	// LCA using the parent pointer in nodes (simple)
 	{
-		LCA x(root, nums[i], nums[j], true);
-
 		std::cout << "LCA (use parent pointer): ";
-		if(const Node* lca = x.get())
+		if(auto lca = tree.lca(nums[i], nums[j], true))
 			std::cout << lca->N << " @ level " << lca->L << std::endl;
 		else
 			std::cout << "not found" << std::endl;
 	}
 	// LCA without using the parent pointer in nodes
 	{
-		LCA x(root, nums[i], nums[j], false);
-
 		std::cout << "LCA (don't use parent pointer): ";
-		if(const Node* lca = x.get())
+		if(auto lca = tree.lca(nums[i], nums[j], false))
 			std::cout << lca->N << " @ level " << lca->L << std::endl;
 		else
 			std::cout << "not found" << std::endl;
