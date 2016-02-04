@@ -3,8 +3,9 @@
  */
 #include <iostream>
 #include <iomanip>
+#include <cstdlib>
 
-#include <list>
+#include <stack>
 
 // Node & Tree functions
 struct Node
@@ -13,14 +14,14 @@ struct Node
 	Node *p;
 	int N;
 	unsigned L;
-	Node(Node* _p, int x, unsigned lv): p(_p), N(x), L(lv), l(NULL), r(NULL) {}
+	Node(Node* _p, int x, unsigned lv): p(_p), N(x), L(lv), l(nullptr), r(nullptr) {}
 };
 
 static void insert(Node*& p, Node* parent, int x, unsigned level = 0)
 {
 	if(p)
 	{
-		if(arc4random() & 1)
+		if(rand() & 1)
 			insert(p->l, p, x, level + 1);
 		else
 			insert(p->r, p, x, level + 1);
@@ -32,7 +33,7 @@ static void insert(Node*& p, Node* parent, int x, unsigned level = 0)
 Node* find(Node* p, int x)
 {
 	if(!p)
-		return NULL;
+		return nullptr;
 
 	if(p->N == x)
 		return p;
@@ -40,103 +41,74 @@ Node* find(Node* p, int x)
 		return l;
 	if(Node* r = find(p->r, x))
 		return r;
-	return NULL;
+	return nullptr;
 }
-
-/*static void print(Node* p)
-{
-	if(!p)
-		return;
-
-	typedef std::list<Node*> fringe_t;
-	fringe_t f;
-	// BFS
-	f.push_back(p);
-	for(fringe_t::const_iterator it = f.begin(); it != f.end(); it++)
-	{
-		Node* p = *it;
-		if(p->l)
-			f.push_back(p->l);
-		if(p->r)
-			f.push_back(p->r);
-	}
-	// Print
-	unsigned lv = 0;
-	for(fringe_t::const_iterator it = f.begin(); it != f.end(); it++)
-	{
-		Node* p = *it;
-
-		if(lv != p->L)
-		{
-			lv = p->L;
-			std::cout << std::endl;
-		}
-		std::cout << std::setw(5) << p->N;
-	}
-	std::cout << std::endl;
-}*/
-
 
 // ====================================
 class LCA
 {
 public:
 	LCA(Node* root, int x, int y, bool use_parent):
-		m_p(NULL)
+		m_p(nullptr)
 	{
 		if(!root)
 			return;
 		if(use_parent)
-			traverse(find(root, x), find(root, y));
+			m_p = traverse(find(root, x), find(root, y));
 		else
-			traverse(root, x, y);
+		{
+			Node* a = find(root, x);
+			Node* b = find(root, y);
+			if(!a || !b)
+				return;
+			m_p = traverse(root, a, b);
+		}
 	}
 
 	const Node* get() const { return m_p; }
 
 private:
-	/**
-	 * Solution for nodes without the parent pointer.
-	 * Returns the number of hits for the given node (for internal use)
-	 */
-	unsigned traverse(const Node* p, int x, int y)
+	// Solution for nodes w/o the parent pointer
+	Node* traverse(Node* cur, const Node* x, const Node* y)
 	{
-		// Number of hits in the left child
-		unsigned a = p->l ? traverse(p->l, x, y) : 0;
-		if(a == 2)
-			return a;
+		if(!cur)
+			return nullptr;
 
-		// Number of hits in the right child
-		unsigned b = p->r ? traverse(p->r, x, y) : 0;
-		if(b == 2)
-			return b;
+		if(cur == x || cur == y)
+			return cur;
 
-		// Number of hits including the current node
-		unsigned k = a + b + (p->N == x || p->N == y);
-		if(k == 2)
-			m_p = p;
-		return k;
+		Node* pR = traverse(cur->l, x, y);
+		Node* pL = traverse(cur->r, x, y);
+
+		if(pR && pL)
+			return cur;
+		return pR ? pR : pL;
 	}
 
-	// Solution for nodes with the parent pointer
-	void traverse(const Node* x, const Node* y)
+	// Solution for nodes w/ the parent pointer
+	Node* traverse(Node* x, Node* y)
 	{
-		// Get paths to root
-		typedef std::list<const Node*> path_t;
+		typedef std::stack<Node*> backtrace_t;
 
-		path_t path_x;
-		for(const Node* p = x; p; p = p->p)
-			path_x.push_front(p);
-		path_t path_y;
-		for(const Node* p = y; p; p = p->p)
-			path_y.push_front(p);
+		if(!x || !y)
+			return nullptr;
 
-		// Loop while paths are equal
-		for(path_t::const_iterator itX = path_x.begin(), endX = path_x.end(),
-								   itY = path_y.begin(), endY = path_y.end();
-			itX != endX && itY != endY && *itX == *itY;
-			itX++, itY++)
-			m_p = *itX;
+		// The first backtrace
+		backtrace_t bt_x;
+		for(auto p = x; p; p = p->p)
+			bt_x.push(p);
+
+		// The second backtrace
+		backtrace_t bt_y;
+		for(auto p = y; p; p = p->p)
+			bt_y.push(p);
+
+		// Loop while backtraces are equal
+		Node* z = nullptr;
+		for(; !bt_x.empty() && !bt_y.empty() && (bt_x.top() == bt_y.top());
+			bt_x.pop(), bt_y.pop())
+			z = bt_x.top();
+		return z;
 	}
 
 private:
@@ -147,6 +119,7 @@ private:
 int main(int, char**)
 {
 	static const unsigned N = 127;
+	srand(time(nullptr));
 
 	// Gen unique numbers
 	int nums[N];
@@ -156,7 +129,7 @@ int main(int, char**)
 
 		for(unsigned j = N; j != i;)
 		{
-			x = (arc4random() % 1000);// - 4096;
+			x = (rand() % 1000);// - 4096;
 			for(j = 0; j < i; j++)
 			{
 				if(x == nums[j])
@@ -168,20 +141,15 @@ int main(int, char**)
 	}
 
 	// Init tree
-	Node* root;
+	Node* root = nullptr;
 	for(unsigned i = 0; i < N; i++)
-		insert(root, NULL, nums[i]);
-
-	// Print
-	//print(root);
+		insert(root, nullptr, nums[i]);
 
 	// Get 2 random numbers for LCA
-	unsigned i = arc4random() % N;
+	unsigned i = rand() % N;
 	unsigned j;
 	do
-	{
-		j = arc4random() % N;
-	}
+		j = rand() % N;
 	while(j == i);
 
 	//std::cout << nums[i] << ":";
