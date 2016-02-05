@@ -1,5 +1,10 @@
 /**
  * Find the LCA (Lowest Common Ancestor) of given nodes in a binary tree.
+ *
+ * 3 solutions:
+ *	- use a link to the parent to compare backtraces
+ *	- use nodes' level during in-order traversal between nodes
+ *	- don't use any additional info
  */
 #include <iostream>
 #include <iomanip>
@@ -21,48 +26,54 @@ public:
 		Node(Node* _p, int x, unsigned lv): p(_p), N(x), L(lv), l(nullptr), r(nullptr) {}
 	};
 
+	// ================================
 	// LCA functions
 public:
-	Node* lca(const T& x, const T& y, bool use_parent)
+	Node* lca_with_parent(const T& x, const T& y) { return lca(x, y); }
+	Node* lca_robust(const T& x, const T& y)
 	{
-		if(!m_root)
-			return nullptr;
-
-		if(use_parent)
-			return traverse(find(x), find(y));
-		else
-		{
-			Node* a = find(x);
-			Node* b = find(y);
-			if(!a || !b)
-				return nullptr;
-			return traverse(m_root, a, b);
-		}
+		Node* a = find(x);
+		Node* b = find(y);
+		return (a && b) ? lca(m_root, *a, *b) : nullptr;
+	}
+	Node* lca_with_level(const T& x, const T& y)
+	{
+		Node* lowest = NULL;
+		return lca(m_root, x, y, lowest);
 	}
 
 private:
-	// Solution for nodes w/o the parent pointer
-	Node* traverse(Node* cur, const Node* x, const Node* y)
+	/**
+	 * The most strict solution when only left and right pointers are
+	 * available. Requires that two nodes exist in the tree.
+	 */
+	Node* lca(Node* cur, const Node& x, const Node& y)
 	{
 		if(!cur)
 			return nullptr;
 
-		if(cur == x || cur == y)
+		if(cur == &x || cur == &y)
 			return cur;
 
-		Node* pR = traverse(cur->l, x, y);
-		Node* pL = traverse(cur->r, x, y);
+		Node* pR = lca(cur->l, x, y);
+		Node* pL = lca(cur->r, x, y);
 
 		if(pR && pL)
 			return cur;
 		return pR ? pR : pL;
 	}
 
-	// Solution for nodes w/ the parent pointer
-	Node* traverse(Node* x, Node* y)
+	/**
+	 * Get "backtraces" to the root and return the last node common for both
+	 * backtraces. Requires a pointer to the parent, but can be easily used
+	 * for LCA of multiple nodes.
+	 */
+	Node* lca(const T& _x, const T& _y)
 	{
 		typedef std::stack<Node*> backtrace_t;
 
+		Node* x = find(_x);
+		Node* y = find(_y);
 		if(!x || !y)
 			return nullptr;
 
@@ -84,6 +95,38 @@ private:
 		return z;
 	}
 
+	/**
+	 * In-post-order traverse the path between two nodes and return a node
+	 * closest to the root. Uses level information for the traversal, but
+	 * doesn't require nodes to be present in a tree.
+	 */
+	Node* lca(Node* cur, const T& x, const T& y, Node*& lowest)
+	{
+		if(!cur)
+			return nullptr;
+
+		// Left
+		Node* p = lca(cur->l, x, y, lowest);
+		if(p)
+			return p;
+
+		// Hit?
+		if(cur->N == x || cur->N == y)
+		{
+			// Second hit = found
+			if(lowest)
+				return ((cur->L < lowest->L) ? cur : lowest);
+			// First hit
+			lowest = cur;
+		}
+		// Looking for the second hit?
+		else if(lowest && cur->L < lowest->L)
+			lowest = cur;
+
+		return lca(cur->r, x, y, lowest);
+	}
+
+	// ================================
 	// Tree functions
 public:
 	Tree(): m_root(nullptr) {}
@@ -117,6 +160,17 @@ private:
 		if(Node* r = find(cur->r, x))
 			return r;
 		return nullptr;
+	}
+
+	friend std::ostream& operator<<(std::ostream& os, const Node& x)
+	{
+		std::stack<const Node*> s;
+		for(const Node* p = &x; p; p = p->p)
+			s.push(p);
+		os << s.top()->N;
+		for(s.pop(); !s.empty(); s.pop())
+			os << " -> " << s.top()->N;
+		return os;
 	}
 
 private:
@@ -161,28 +215,42 @@ int main(int, char**)
 	while(j == i);
 
 	//std::cout << nums[i] << ":";
-	std::cout << "Node A: " << nums[i];
-	for(auto p = tree.find(nums[i])->p; p; p = p->p)
-		std::cout << " <- " << p->N;
+	std::cout << "Node A: ";
+	auto a = tree.find(nums[i]);
+	if(a)
+		std::cout << *a;
+	else
+		std::cout << "none";
 	std::cout << std::endl;
 
-	std::cout << "Node B: " << nums[j];
-	for(auto p = tree.find(nums[j])->p; p; p = p->p)
-		std::cout << " <- " << p->N;
+	std::cout << "Node B: ";
+	auto b = tree.find(nums[j]);
+	if(b)
+		std::cout << *b;
+	else
+		std::cout << "none";
 	std::cout << std::endl;
 
-	// LCA using the parent pointer in nodes (simple)
+	// LCA using the parent pointer in nodes
 	{
-		std::cout << "LCA (use parent pointer): ";
-		if(auto lca = tree.lca(nums[i], nums[j], true))
+		std::cout << "LCA (use parent pointer)  : ";
+		if(auto lca = tree.lca_with_parent(nums[i], nums[j]))
 			std::cout << lca->N << " @ level " << lca->L << std::endl;
 		else
 			std::cout << "not found" << std::endl;
 	}
-	// LCA without using the parent pointer in nodes
+	// LCA w/o using any additinal information from the nodes
 	{
-		std::cout << "LCA (don't use parent pointer): ";
-		if(auto lca = tree.lca(nums[i], nums[j], false))
+		std::cout << "LCA (don't use extra info): ";
+		if(auto lca = tree.lca_robust(nums[i], nums[j]))
+			std::cout << lca->N << " @ level " << lca->L << std::endl;
+		else
+			std::cout << "not found" << std::endl;
+	}
+	// LCA using the nodes' level information
+	{
+		std::cout << "LCA (use level info)      : ";
+		if(auto lca = tree.lca_with_level(nums[i], nums[j]))
 			std::cout << lca->N << " @ level " << lca->L << std::endl;
 		else
 			std::cout << "not found" << std::endl;
