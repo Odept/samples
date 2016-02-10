@@ -305,10 +305,10 @@ static void fixDown(unsigned at, Item* a, unsigned n)
 	 * (having one extra empty element in the beginning): heap_index = index + 1
 	 */
 	unsigned j = (at + 1) * 2;
-	if(j > n) // = (heap_child >= heap_n)
+	if(j > n) // = (heap_child >= heap_n) = (child >= n) = (j-1 >= n) = (j >= n+1) = (j > n)
 		return;
 	// Select the maximum child element (non-heap index)
-	j = (j < n && a[j - 1] < a[j]) ? j : (j - 1);
+	j = (j < n && a[j - 1] < a[j]) ? j : (j - 1); // = (j-1 < n-1)
 	if(a[j] < a[at])
 		return;
 	exch(a[at], a[j]);
